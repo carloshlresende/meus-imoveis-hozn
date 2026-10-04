@@ -1,122 +1,152 @@
-import Image, { StaticImageData } from "next/image"
-import Link from "next/link"
+"use client"
 
-import icon_1 from "@/assets/images/dashboard/icon/icon_18.svg";
-import icon_2 from "@/assets/images/dashboard/icon/icon_19.svg";
-import icon_3 from "@/assets/images/dashboard/icon/icon_20.svg";
-import icon_4 from "@/assets/images/dashboard/icon/icon_21.svg";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
-import listImg_1 from "@/assets/images/dashboard/img_01.jpg";
-import listImg_2 from "@/assets/images/dashboard/img_02.jpg";
-import listImg_3 from "@/assets/images/dashboard/img_03.jpg";
-import listImg_4 from "@/assets/images/dashboard/img_04.jpg";
-import listImg_5 from "@/assets/images/dashboard/img_05.jpg";
+type Property = {
+  id: string;
+  name: string;
+  address: string;
+  city: string | null;
+  state: string | null;
+  type: string | null;
+  estimated_value: number | null;
+  status: string | null;
+  created_at: string;
+};
 
-interface DataType {
-   id: number;
-   title: string;
-   address: string;
-   price: number;
-   date: string;
-   view: number;
-   img: StaticImageData;
-   status: string;
-   status_bg?: string;
-}
+const money = (value: number | null) =>
+  (value ?? 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 
-const list_data: DataType[] = [
-   {
-      id: 1,
-      title: "Galaxy Flat",
-      address: "Mirpur 10, dhaka, BD",
-      price: 32800,
-      date: "13 Jan, 2023",
-      view: 1210,
-      img: listImg_1,
-      status: "Active",
-   },
-   {
-      id: 2,
-      title: "White House villa",
-      address: "Ranchview, California, USA",
-      price: 42130,
-      date: "09 Jan, 2023",
-      view: 0,
-      img: listImg_2,
-      status: "Pending",
-      status_bg: "pending"
-   },
-   {
-      id: 3,
-      title: "Luxury villa in Dal lake",
-      address: "Muza link road, ca, usa",
-      price: 2370,
-      date: "17 Oct, 2022",
-      view: 0,
-      img: listImg_3,
-      status: "Processing",
-      status_bg: "processing",
-   },
-   {
-      id: 4,
-      title: "Wooden World",
-      address: "Board Baxar, Califronia, USA",
-      price: 63300,
-      date: "23 Sep, 2022",
-      view: 970,
-      img: listImg_4,
-      status: "Active",
-   },
-   {
-      id: 5,
-      title: "Orkit Villa",
-      address: "Green Road, Uttara, BD",
-      price: 72000,
-      date: "15 Aug, 2022",
-      view: 2320,
-      img: listImg_5,
-      status: "Active",
-   },
-]
+const statusLabel = (status: string | null) => {
+  if (status === "vacant") return "Vago";
+  if (status === "rented") return "Alugado";
+  if (status === "maintenance") return "Manutenção";
+  return status || "Sem status";
+};
 
 const PropertyTableBody = () => {
-   return (
-      <tbody className="border-0">
-         {list_data.map((item) => (
-            <tr key={item.id}>
-               <td>
-                  <div className="d-lg-flex align-items-center position-relative">
-                     <Image src={item.img} alt="" className="p-img" />
-                     <div className="ps-lg-4 md-pt-10">
-                        <Link href="#" className="property-name tran3s color-dark fw-500 fs-20 stretched-link">{item.title}</Link>
-                        <div className="address">{item.address}</div>
-                        <strong className="price color-dark">${item.price}</strong>
-                     </div>
-                  </div>
-               </td>
-               <td>{item.date}</td>
-               <td>{item.view}</td>
-               <td>
-                  <div className={`property-status ${item.status_bg}`}>{item.status}</div>
-               </td>
-               <td>
-                  <div className="action-dots float-end">
-                     <button className="action-btn dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                        aria-expanded="false">
-                        <span></span>
-                     </button>
-                     <ul className="dropdown-menu dropdown-menu-end">
-                        <li><Link className="dropdown-item" href="#"><Image src={icon_1} alt="" className="lazy-img" /> View</Link></li>
-                        <li><Link className="dropdown-item" href="#"><Image src={icon_2} alt="" className="lazy-img" /> Share</Link></li>
-                        <li><Link className="dropdown-item" href="#"><Image src={icon_3} alt="" className="lazy-img" /> Edit</Link></li>
-                        <li><Link className="dropdown-item" href="#"><Image src={icon_4} alt="" className="lazy-img" /> Delete</Link></li>
-                     </ul>
-                  </div>
-               </td>
-            </tr>
-         ))}
-      </tbody>
-   )
-}
+  const supabase = createClient();
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default PropertyTableBody
+  async function loadProperties() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("properties")
+      .select("id,name,address,city,state,type,estimated_value,status,created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      setProperties([]);
+    } else {
+      setProperties(data ?? []);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadProperties();
+  }, []);
+
+  if (loading) {
+    return (
+      <tbody className="border-0">
+        <tr>
+          <td colSpan={5} className="text-center py-5">
+            Carregando imóveis...
+          </td>
+        </tr>
+      </tbody>
+    );
+  }
+
+  if (properties.length === 0) {
+    return (
+      <tbody className="border-0">
+        <tr>
+          <td colSpan={5} className="text-center py-5">
+            Nenhum imóvel cadastrado ainda.
+          </td>
+        </tr>
+      </tbody>
+    );
+  }
+
+  return (
+    <tbody className="border-0">
+      {properties.map((item) => (
+        <tr key={item.id}>
+          <td>
+            <div className="position-relative">
+              <div>
+                <Link
+                  href="#"
+                  className="property-name tran3s color-dark fw-500 fs-20"
+                >
+                  {item.name}
+                </Link>
+                <div className="address">
+                  {item.address}
+                  {item.city ? ` · ${item.city}` : ""}
+                  {item.state ? `/${item.state}` : ""}
+                </div>
+                <strong className="price color-dark">
+                  {money(item.estimated_value)}
+                </strong>
+              </div>
+            </div>
+          </td>
+
+          <td>{new Date(item.created_at).toLocaleDateString("pt-BR")}</td>
+          <td>{item.type || "—"}</td>
+
+          <td>
+            <div
+              className={`property-status ${
+                item.status === "vacant" ? "pending" : ""
+              }`}
+            >
+              {statusLabel(item.status)}
+            </div>
+          </td>
+
+          <td>
+            <div className="action-dots float-end">
+              <button
+                className="action-btn dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <span></span>
+              </button>
+
+              <ul className="dropdown-menu dropdown-menu-end">
+                <li>
+                  <button
+                    className="dropdown-item"
+                    onClick={() =>
+                      alert("Edição será adicionada na próxima etapa.")
+                    }
+                  >
+                    Editar
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  );
+};
+
+export default PropertyTableBody;
