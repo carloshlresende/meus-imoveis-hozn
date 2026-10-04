@@ -21,6 +21,7 @@ const AddPropertyBody = () => {
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [estimatedValue, setEstimatedValue] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -39,6 +40,32 @@ const AddPropertyBody = () => {
       return;
     }
 
+    let imageUrl: string | null = null;
+
+    if (imageFile) {
+      const extension = imageFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const filePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("property-images")
+        .upload(filePath, imageFile, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        setSaving(false);
+        setMessage("Erro ao enviar foto: " + uploadError.message);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("property-images")
+        .getPublicUrl(filePath);
+
+      imageUrl = publicUrlData.publicUrl;
+    }
+
     const { error } = await supabase.from("properties").insert({
       user_id: user.id,
       name,
@@ -53,6 +80,7 @@ const AddPropertyBody = () => {
         ? Number(estimatedValue.replace(",", "."))
         : null,
       status: "vacant",
+      image_url: imageUrl,
     });
 
     setSaving(false);
@@ -154,6 +182,16 @@ const AddPropertyBody = () => {
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="dash-input-wrapper mb-30">
+              <label>Foto principal</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+              />
+              <small>Formatos: JPG, PNG ou WEBP.</small>
             </div>
           </div>
 
