@@ -24,6 +24,11 @@ type ContractOption = {
   id: string;
   tenant_id: string | null;
   property_id: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  rent_amount: number | null;
+  due_day: number | null;
+  status: string | null;
   tenants: { name: string } | null;
   units: { name: string; properties: { name: string } | null } | null;
 };
@@ -81,7 +86,7 @@ export default function InvoicesPage(){
   async function loadContracts(){
     const {data,error}=await supabase
       .from("leases")
-      .select("id,tenant_id,property_id,tenants!leases_tenant_id_fkey(name),units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name))")
+      .select("id,tenant_id,property_id,start_date,end_date,rent_amount,due_day,status,tenants!leases_tenant_id_fkey(name),units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name))")
       .in("status",["active","upcoming"])
       .order("created_at");
 
@@ -160,11 +165,53 @@ export default function InvoicesPage(){
       return;
     }
 
+    const selectedLeaseRows=contracts.filter(c=>selectedContracts.includes(c.id));
+
+    const firstDay=`${period}-01`;
+    const [year,month]=period.split("-").map(Number);
+    const lastDay=`${period}-${String(new Date(year,month,0).getDate()).padStart(2,"0")}`;
+
+    const eligibleContracts=selectedLeaseRows.filter(c=>
+      (!c.start_date || c.start_date<=lastDay) &&
+      (!c.end_date || c.end_date>=firstDay)
+    );
+
+    if(eligibleContracts.length===0){
+      setGenerating(false);
+      setMessage("Nenhum dos contratos selecionados está vigente nesta competência.");
+      return;
+    }
+
+    const dueDateFor=(day:number)=>{
+      const last=new Date(year,month,0).getDate();
+      return `${period}-${String(Math.min(Math.max(day||1,1),last)).padStart(2,"0")}`;
+    };
+
+    const chargeRows=eligibleContracts.map(c=>({
+      user_id:user.id,
+      lease_id:c.id,
+      period,
+      due_date:dueDateFor(c.due_day??1),
+      amount:Number(c.rent_amount)||0,
+      amount_paid:0,
+      status:dueDateFor(c.due_day??1)<new Date().toISOString().slice(0,10)?"overdue":"open",
+    }));
+
+    const {error:chargeUpsertError}=await supabase
+      .from("rent_charges")
+      .upsert(chargeRows,{onConflict:"lease_id,period",ignoreDuplicates:true});
+
+    if(chargeUpsertError){
+      setGenerating(false);
+      setMessage("Erro ao preparar cobranças mensais: "+chargeUpsertError.message);
+      return;
+    }
+
     const {data:charges,error}=await supabase
       .from("rent_charges")
       .select("id,lease_id,period,due_date,amount,status,leases!rent_charges_lease_id_fkey(property_id,tenant_id,tenants!leases_tenant_id_fkey(name),units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name)))")
       .eq("period",period)
-      .in("lease_id",selectedContracts.length?selectedContracts:["00000000-0000-0000-0000-000000000000"]);
+      .in("lease_id",eligibleContracts.map(c=>c.id));
 
     if(error){
       setGenerating(false);
@@ -191,12 +238,6 @@ export default function InvoicesPage(){
         updated_at:new Date().toISOString(),
       }));
 
-    if(rows.length===0){
-      setGenerating(false);
-      setMessage("Não existem cobranças dessa competência. Gere primeiro as cobranças mensais.");
-      return;
-    }
-
     const {error:insertError}=await supabase
       .from("invoices")
       .upsert(rows,{onConflict:"rent_charge_id",ignoreDuplicates:true});
@@ -208,7 +249,7 @@ export default function InvoicesPage(){
       return;
     }
 
-    setMessage("Faturas geradas. Cobranças já faturadas não foram duplicadas.");
+    setMessage("Faturas geradas. As cobranças mensais faltantes foram criadas automaticamente e nenhuma fatura foi duplicada.");
     await loadInvoices();
   }
 
