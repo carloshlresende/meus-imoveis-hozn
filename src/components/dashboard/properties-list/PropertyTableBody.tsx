@@ -52,6 +52,26 @@ const PropertyTableBody = () => {
     setLoading(false);
   }
 
+  async function handleDelete(id: string, name: string) {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja excluir o imóvel "${name}"?`
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("properties")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      alert("Erro ao excluir imóvel: " + error.message);
+      return;
+    }
+
+    await loadProperties();
+  }
+
   useEffect(() => {
     loadProperties();
   }, []);
@@ -87,12 +107,9 @@ const PropertyTableBody = () => {
           <td>
             <div className="position-relative">
               <div>
-                <Link
-                  href="#"
-                  className="property-name tran3s color-dark fw-500 fs-20"
-                >
+                <div className="property-name color-dark fw-500 fs-20">
                   {item.name}
-                </Link>
+                </div>
                 <div className="address">
                   {item.address}
                   {item.city ? ` · ${item.city}` : ""}
@@ -131,13 +148,20 @@ const PropertyTableBody = () => {
 
               <ul className="dropdown-menu dropdown-menu-end">
                 <li>
-                  <button
+                  <Link
                     className="dropdown-item"
-                    onClick={() =>
-                      alert("Edição será adicionada na próxima etapa.")
-                    }
+                    href={`/dashboard/edit-property/${item.id}`}
                   >
                     Editar
+                  </Link>
+                </li>
+
+                <li>
+                  <button
+                    className="dropdown-item text-danger"
+                    onClick={() => handleDelete(item.id, item.name)}
+                  >
+                    Excluir
                   </button>
                 </li>
               </ul>
