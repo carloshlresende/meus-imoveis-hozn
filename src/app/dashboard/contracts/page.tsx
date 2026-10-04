@@ -73,7 +73,7 @@ export default function ContractsPage() {
       supabase.from("tenants").select("id,name").order("name"),
       supabase
         .from("leases")
-        .select("id,property_id,unit_id,tenant_id,start_date,end_date,rent_amount,adjustment_index,due_day,deposit,late_fee,status,notes,units(name,properties(name)),tenants(name)")
+        .select("id,property_id,unit_id,tenant_id,start_date,end_date,rent_amount,adjustment_index,due_day,deposit,late_fee,status,notes,units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name)),tenants!leases_tenant_id_fkey(name)")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -223,6 +223,8 @@ export default function ContractsPage() {
               {showForm ? "Fechar formulário" : "+ Novo contrato"}
             </button>
           </div>
+
+          {message && !showForm && <div className="alert alert-light border mb-25">{message}</div>}
 
           {showForm && (
             <form onSubmit={save}>
