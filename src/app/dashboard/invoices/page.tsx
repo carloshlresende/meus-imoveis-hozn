@@ -82,6 +82,9 @@ export default function InvoicesPage(){
   const [message,setMessage]=useState("");
   const [contracts,setContracts]=useState<ContractOption[]>([]);
   const [selectedContracts,setSelectedContracts]=useState<string[]>([]);
+  const [search,setSearch]=useState("");
+  const [statusFilter,setStatusFilter]=useState("all");
+  const [paymentFilter,setPaymentFilter]=useState("all");
 
   async function loadContracts(){
     const {data,error}=await supabase
@@ -133,6 +136,24 @@ export default function InvoicesPage(){
     if(i.status==="overdue") acc.overdue+=Number(i.total)||0;
     return acc;
   },{total:0,paid:0,overdue:0}),[invoices]);
+
+  const filteredInvoices=useMemo(()=>{
+    const q=search.trim().toLowerCase();
+    return invoices.filter(i=>{
+      const tenant=i.leases?.tenants?.name??"";
+      const property=i.leases?.units?.properties?.name??"";
+      const unit=i.leases?.units?.name??"";
+      const matchesSearch=!q||[tenant,property,unit,i.period,i.id].some(v=>String(v).toLowerCase().includes(q));
+      const matchesStatus=statusFilter==="all"||i.status===statusFilter;
+      const matchesPayment=
+        paymentFilter==="all"||
+        (paymentFilter==="asaas"&&i.payment_mode!=="manual_pix")||
+        (paymentFilter==="pix"&&i.payment_mode==="manual_pix");
+      return matchesSearch&&matchesStatus&&matchesPayment;
+    });
+  },[invoices,search,statusFilter,paymentFilter]);
+
+  const hasActiveFilters=Boolean(search.trim()||statusFilter!=="all"||paymentFilter!=="all");
 
   function toggleContract(id:string){
     setSelectedContracts(prev=>
@@ -334,6 +355,25 @@ export default function InvoicesPage(){
     setMessage("Faturas atualizadas.");
   }
 
+  const statusStyle=(status:string)=>{
+    if(status==="paid") return {background:"#e9f8ef",color:"#16794a"};
+    if(status==="overdue") return {background:"#fff0f0",color:"#c53030"};
+    if(status==="cancelled") return {background:"#f1f1f1",color:"#6b7280"};
+    if(status==="issued") return {background:"#eef4ff",color:"#315ea8"};
+    return {background:"#fff8e6",color:"#946200"};
+  };
+
+  const referenceLabel=(p:string)=>{
+    const [y,m]=p.split("-");
+    return `${m}/${y}`;
+  };
+
+  function clearFilters(){
+    setSearch("");
+    setStatusFilter("all");
+    setPaymentFilter("all");
+  }
+
   return <Wrapper><div className="dashboard-body"><div className="position-relative">
     <DashboardHeaderTwo title="Faturas"/>
     <h2 className="main-title d-block d-lg-none">Faturas</h2>
@@ -404,63 +444,181 @@ export default function InvoicesPage(){
 
     {message&&<div className="alert alert-light border mb-25">{message}</div>}
 
-    <div className="bg-white card-box border-20">
+    <div className="bg-white card-box border-20 p-0 overflow-hidden">
+      <div className="p-3 p-lg-4 border-bottom">
+        <div className="d-flex flex-wrap align-items-end justify-content-between gap-3">
+          <div className="d-flex flex-wrap gap-2">
+            <div>
+              <label className="d-block mb-1 small">Situação</label>
+              <select className="form-select" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+                <option value="all">Todas</option>
+                <option value="pending">Aguardando pagamento</option>
+                <option value="issued">Emitida</option>
+                <option value="paid">Paga</option>
+                <option value="overdue">Vencida</option>
+                <option value="cancelled">Cancelada</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="d-block mb-1 small">Forma de pagamento</label>
+              <select className="form-select" value={paymentFilter} onChange={e=>setPaymentFilter(e.target.value)}>
+                <option value="all">Todas</option>
+                <option value="asaas">Asaas / boleto</option>
+                <option value="pix">PIX manual</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{minWidth:280}}>
+            <label className="d-block mb-1 small">Pesquisar</label>
+            <input
+              className="form-control"
+              type="search"
+              placeholder="Inquilino, imóvel, referência..."
+              value={search}
+              onChange={e=>setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {hasActiveFilters&&(
+        <div className="px-3 px-lg-4 py-2 border-bottom d-flex flex-wrap align-items-center gap-2">
+          <strong className="me-1">Filtros ativos</strong>
+          {statusFilter!=="all"&&(
+            <span className="badge rounded-pill text-bg-light border">
+              Situação: {statusLabel(statusFilter)}
+            </span>
+          )}
+          {paymentFilter!=="all"&&(
+            <span className="badge rounded-pill text-bg-light border">
+              Pagamento: {paymentFilter==="pix"?"PIX manual":"Asaas / boleto"}
+            </span>
+          )}
+          {search.trim()&&(
+            <span className="badge rounded-pill text-bg-light border">
+              Busca: {search}
+            </span>
+          )}
+          <button className="btn btn-sm btn-link text-decoration-none" onClick={clearFilters}>Limpar</button>
+        </div>
+      )}
+
       <div className="table-responsive">
-        <table className="table property-list-table">
+        <table className="table align-middle mb-0">
           <thead>
-            <tr><th>Imóvel / Locatário</th><th>Vencimento</th><th>Valor</th><th>Fatura</th><th>Asaas</th><th>WhatsApp</th><th>Ações</th></tr>
+            <tr style={{background:"#050505",color:"#fff"}}>
+              <th className="px-3 py-3">Ações</th>
+              <th className="px-3 py-3 text-center">Cobrança</th>
+              <th className="px-3 py-3">ID</th>
+              <th className="px-3 py-3">Inquilino</th>
+              <th className="px-3 py-3">Contrato / Imóvel</th>
+              <th className="px-3 py-3">Valor total</th>
+              <th className="px-3 py-3">Referência</th>
+              <th className="px-3 py-3">Vencimento</th>
+              <th className="px-3 py-3">Forma de pagamento</th>
+              <th className="px-3 py-3">Situação</th>
+              <th className="px-3 py-3">WhatsApp</th>
+            </tr>
           </thead>
-          <tbody className="border-0">
-            {loading?<tr><td colSpan={7} className="text-center py-5">Carregando faturas...</td></tr>:
-            invoices.length===0?<tr><td colSpan={7} className="text-center py-5">Nenhuma fatura nesta competência.</td></tr>:
-            invoices.map(i=><tr key={i.id}>
-              <td>
-                <strong>{i.leases?.units?.properties?.name??"—"}</strong> · {i.leases?.units?.name??"—"}
-                <br/><small>{i.leases?.tenants?.name??"—"}</small>
-              </td>
-              <td>{new Date(i.due_date+"T12:00:00").toLocaleDateString("pt-BR")}</td>
-              <td><strong>{money(i.total)}</strong></td>
-              <td>{statusLabel(i.status)}</td>
-              <td>
-                {i.payment_mode==="manual_pix"
-                  ? <><strong>PIX manual</strong>{i.manual_pix_key&&<><br/><small>{i.manual_pix_key}</small></>}</>
-                  : i.asaas_payment_id
-                    ? <><span>{i.asaas_status||"Criado"}</span><br/><small>{i.asaas_payment_id}</small></>
-                    : <span>Boleto não emitido</span>}
-              </td>
-              <td>{i.whatsapp_status||"Não enviado"}</td>
-              <td>
-                <div className="d-flex gap-2 flex-wrap">
-                  {i.payment_mode!=="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&
-                    <button className="btn btn-sm btn-dark" disabled={issuingId===i.id} onClick={()=>issueAsaas(i)}>
-                      {issuingId===i.id?"Emitindo...":"Gerar boleto"}
-                    </button>}
 
-                  {i.payment_mode!=="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&
-                    <button className="btn btn-sm btn-outline-dark" onClick={()=>markManualPix(i)}>
-                      Usar PIX sem boleto
-                    </button>}
+          <tbody>
+            {loading?(
+              <tr><td colSpan={11} className="text-center py-5">Carregando faturas...</td></tr>
+            ):filteredInvoices.length===0?(
+              <tr><td colSpan={11} className="text-center py-5">Nenhuma fatura encontrada.</td></tr>
+            ):filteredInvoices.map(i=>(
+              <tr key={i.id}>
+                <td className="px-3 py-3">
+                  <div className="d-flex flex-wrap gap-2 align-items-center">
+                    <button className="btn btn-sm btn-link p-0 text-decoration-none" onClick={()=>{}}>
+                      👁 Visualizar
+                    </button>
 
-                  {i.payment_mode==="manual_pix"&&i.status!=="paid"&&
-                    <button className="btn btn-sm btn-outline-secondary" onClick={()=>markManualPix(i)}>
-                      Editar PIX
-                    </button>}
+                    {i.payment_mode!=="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&(
+                      <button className="btn btn-sm btn-link p-0 text-decoration-none" disabled={issuingId===i.id} onClick={()=>issueAsaas(i)}>
+                        {issuingId===i.id?"Emitindo...":"Gerar boleto"}
+                      </button>
+                    )}
 
-                  {i.payment_mode==="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&
-                    <button className="btn btn-sm btn-outline-dark" onClick={()=>switchToAsaas(i)}>
-                      Trocar para boleto
-                    </button>}
+                    {i.payment_mode!=="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&(
+                      <button className="btn btn-sm btn-link p-0 text-decoration-none" onClick={()=>markManualPix(i)}>
+                        Usar PIX
+                      </button>
+                    )}
 
-                  {i.asaas_bank_slip_url&&
-                    <a className="btn btn-sm btn-outline-dark" href={i.asaas_bank_slip_url} target="_blank" rel="noreferrer">Boleto</a>}
-                  {i.asaas_invoice_url&&
-                    <a className="btn btn-sm btn-outline-secondary" href={i.asaas_invoice_url} target="_blank" rel="noreferrer">Asaas</a>}
-                </div>
-              </td>
-            </tr>)}
+                    {i.payment_mode==="manual_pix"&&i.status!=="paid"&&(
+                      <button className="btn btn-sm btn-link p-0 text-decoration-none" onClick={()=>markManualPix(i)}>
+                        Editar PIX
+                      </button>
+                    )}
+                  </div>
+                </td>
+
+                <td className="px-3 py-3 text-center">
+                  {i.asaas_bank_slip_url?(
+                    <a href={i.asaas_bank_slip_url} target="_blank" rel="noreferrer" title="Abrir boleto" style={{fontSize:20}}>✅</a>
+                  ):i.payment_mode==="manual_pix"?(
+                    <span title="PIX sem boleto" style={{fontSize:20}}>—</span>
+                  ):(
+                    <span title="Boleto ainda não emitido" style={{fontSize:20}}>❌</span>
+                  )}
+                </td>
+
+                <td className="px-3 py-3">
+                  <small>{i.id.slice(0,8).toUpperCase()}</small>
+                </td>
+
+                <td className="px-3 py-3">
+                  <strong>{i.leases?.tenants?.name??"—"}</strong>
+                </td>
+
+                <td className="px-3 py-3">
+                  <strong>{i.leases?.units?.properties?.name??"—"}</strong>
+                  <br/><small>{i.leases?.units?.name??"—"}</small>
+                </td>
+
+                <td className="px-3 py-3"><strong>{money(i.total)}</strong></td>
+
+                <td className="px-3 py-3">{referenceLabel(i.period)}</td>
+
+                <td className="px-3 py-3">
+                  {new Date(i.due_date+"T12:00:00").toLocaleDateString("pt-BR")}
+                </td>
+
+                <td className="px-3 py-3">
+                  {i.payment_mode==="manual_pix"
+                    ?"PIX"
+                    :"Asaas (Boleto/PIX automatizado)"}
+                </td>
+
+                <td className="px-3 py-3">
+                  <span style={{
+                    ...statusStyle(i.status),
+                    display:"inline-block",
+                    padding:"5px 10px",
+                    borderRadius:999,
+                    fontSize:12,
+                    fontWeight:600,
+                    whiteSpace:"nowrap"
+                  }}>
+                    {statusLabel(i.status)}
+                  </span>
+                </td>
+
+                <td className="px-3 py-3">
+                  {i.whatsapp_status==="read"?"🟢 Visualizado":
+                   i.whatsapp_status==="delivered"?"🟡 Entregue":
+                   i.whatsapp_status==="sent"?"🔵 Enviado":
+                   "⚪ Não enviado"}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
     </div>
+
   </div></div></Wrapper>
 }
