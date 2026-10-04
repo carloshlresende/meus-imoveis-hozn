@@ -39,6 +39,9 @@ type Invoice = {
   issued_at: string | null;
   paid_at: string | null;
   whatsapp_status: string | null;
+  payment_mode: string;
+  manual_pix_key: string | null;
+  manual_payment_instructions: string | null;
   leases: {
     tenants: { name: string } | null;
     units: { name: string; properties: { name: string } | null } | null;
@@ -69,7 +72,7 @@ export default function InvoicesPage(){
     setLoading(true);
     const {data,error}=await supabase
       .from("invoices")
-      .select("id,lease_id,rent_charge_id,tenant_id,property_id,period,due_date,subtotal,adjustments,total,status,asaas_payment_id,asaas_status,asaas_invoice_url,asaas_bank_slip_url,issued_at,paid_at,whatsapp_status,leases!invoices_lease_id_fkey(tenants!leases_tenant_id_fkey(name),units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name)))")
+      .select("id,lease_id,rent_charge_id,tenant_id,property_id,period,due_date,subtotal,adjustments,total,status,asaas_payment_id,asaas_status,asaas_invoice_url,asaas_bank_slip_url,issued_at,paid_at,whatsapp_status,payment_mode,manual_pix_key,manual_payment_instructions,leases!invoices_lease_id_fkey(tenants!leases_tenant_id_fkey(name),units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name)))")
       .eq("period",period)
       .order("due_date");
 
@@ -128,6 +131,7 @@ export default function InvoicesPage(){
         total:Number(c.amount)||0,
         description:`Aluguel - competência ${c.period}`,
         status:c.status==="paid"?"paid":c.status==="overdue"?"overdue":"pending",
+        payment_mode:"asaas_boleto",
         updated_at:new Date().toISOString(),
       }));
 
@@ -149,6 +153,55 @@ export default function InvoicesPage(){
     }
 
     setMessage("Faturas geradas. Cobranças já faturadas não foram duplicadas.");
+    await loadInvoices();
+  }
+
+  async function markManualPix(invoice:Invoice){
+    const pixKey=window.prompt("Informe a chave PIX que aparecerá na fatura:");
+    if(pixKey===null)return;
+
+    const instructions=window.prompt(
+      "Instruções adicionais (opcional):",
+      "Pagamento via PIX. Após o pagamento, envie o comprovante."
+    );
+
+    const {error}=await supabase
+      .from("invoices")
+      .update({
+        payment_mode:"manual_pix",
+        manual_pix_key:pixKey.trim()||null,
+        manual_payment_instructions:instructions?.trim()||null,
+        status:invoice.status==="pending"?"issued":invoice.status,
+        issued_at:invoice.issued_at??new Date().toISOString(),
+        updated_at:new Date().toISOString(),
+      })
+      .eq("id",invoice.id);
+
+    if(error){
+      setMessage("Erro ao configurar PIX manual: "+error.message);
+      return;
+    }
+
+    setMessage("Fatura configurada para pagamento por PIX manual, sem boleto Asaas.");
+    await loadInvoices();
+  }
+
+  async function switchToAsaas(invoice:Invoice){
+    const {error}=await supabase
+      .from("invoices")
+      .update({
+        payment_mode:"asaas_boleto",
+        manual_pix_key:null,
+        manual_payment_instructions:null,
+        updated_at:new Date().toISOString(),
+      })
+      .eq("id",invoice.id);
+
+    if(error){
+      setMessage("Erro ao alterar forma de pagamento: "+error.message);
+      return;
+    }
+
     await loadInvoices();
   }
 
@@ -231,17 +284,35 @@ export default function InvoicesPage(){
               <td><strong>{money(i.total)}</strong></td>
               <td>{statusLabel(i.status)}</td>
               <td>
-                {i.asaas_payment_id
-                  ? <><span>{i.asaas_status||"Criado"}</span><br/><small>{i.asaas_payment_id}</small></>
-                  : <span>Não emitido</span>}
+                {i.payment_mode==="manual_pix"
+                  ? <><strong>PIX manual</strong>{i.manual_pix_key&&<><br/><small>{i.manual_pix_key}</small></>}</>
+                  : i.asaas_payment_id
+                    ? <><span>{i.asaas_status||"Criado"}</span><br/><small>{i.asaas_payment_id}</small></>
+                    : <span>Boleto não emitido</span>}
               </td>
               <td>{i.whatsapp_status||"Não enviado"}</td>
               <td>
                 <div className="d-flex gap-2 flex-wrap">
-                  {!i.asaas_payment_id&&i.status!=="paid"&&
+                  {i.payment_mode!=="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&
                     <button className="btn btn-sm btn-dark" disabled={issuingId===i.id} onClick={()=>issueAsaas(i)}>
                       {issuingId===i.id?"Emitindo...":"Gerar boleto"}
                     </button>}
+
+                  {i.payment_mode!=="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&
+                    <button className="btn btn-sm btn-outline-dark" onClick={()=>markManualPix(i)}>
+                      Usar PIX sem boleto
+                    </button>}
+
+                  {i.payment_mode==="manual_pix"&&i.status!=="paid"&&
+                    <button className="btn btn-sm btn-outline-secondary" onClick={()=>markManualPix(i)}>
+                      Editar PIX
+                    </button>}
+
+                  {i.payment_mode==="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&
+                    <button className="btn btn-sm btn-outline-dark" onClick={()=>switchToAsaas(i)}>
+                      Trocar para boleto
+                    </button>}
+
                   {i.asaas_bank_slip_url&&
                     <a className="btn btn-sm btn-outline-dark" href={i.asaas_bank_slip_url} target="_blank" rel="noreferrer">Boleto</a>}
                   {i.asaas_invoice_url&&
