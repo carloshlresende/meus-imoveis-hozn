@@ -14,21 +14,20 @@ const PropertyListBody = () => {
    return (
       <div className="dashboard-body">
          <div className="position-relative">
-            <DashboardHeaderTwo title="My Properties" />
-            <h2 className="main-title d-block d-lg-none">My Properties</h2>
+            <DashboardHeaderTwo title="Meus imóveis" />
+            <h2 className="main-title d-block d-lg-none">Meus imóveis</h2>
             <div className="d-sm-flex align-items-center justify-content-between mb-25">
-               <div className="fs-16">Showing <span className="color-dark fw-500">1–5</span> of <span
-                  className="color-dark fw-500">40</span> results</div>
+               <div className="fs-16">Visualize e gerencie os imóveis cadastrados</div>
                <div className="d-flex ms-auto xs-mt-30">
                   <div className="short-filter d-flex align-items-center ms-sm-auto">
-                     <div className="fs-16 me-2">Short by:</div>
+                     <div className="fs-16 me-2">Ordenar:</div>
                      <NiceSelect className="nice-select"
                         options={[
-                           { value: "1", text: "Newest" },
-                           { value: "2", text: "Best Seller" },
-                           { value: "3", text: "Best Match" },
-                           { value: "4", text: "Price Low" },
-                           { value: "5", text: "Price High" },
+                           { value: "1", text: "Mais recentes" },
+                           { value: "2", text: "Nome" },
+                           { value: "3", text: "Status" },
+                           { value: "4", text: "Menor valor" },
+                           { value: "5", text: "Maior valor" },
                         ]}
                         defaultCurrent={0}
                         onChange={selectHandler}
