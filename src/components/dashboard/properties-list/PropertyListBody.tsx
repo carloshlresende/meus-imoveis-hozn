@@ -42,11 +42,11 @@ const PropertyListBody = () => {
                   <table className="table property-list-table">
                      <thead>
                         <tr>
-                           <th scope="col">Title</th>
-                           <th scope="col">Date</th>
-                           <th scope="col">View</th>
+                           <th scope="col">Imóvel</th>
+                           <th scope="col">Cadastro</th>
+                           <th scope="col">Tipo</th>
                            <th scope="col">Status</th>
-                           <th scope="col">Action</th>
+                           <th scope="col">Ações</th>
                         </tr>
                      </thead>
                      <PropertyTableBody />
