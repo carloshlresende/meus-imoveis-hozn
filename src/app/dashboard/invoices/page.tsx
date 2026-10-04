@@ -20,6 +20,14 @@ type Charge = {
   } | null;
 };
 
+type ContractOption = {
+  id: string;
+  tenant_id: string | null;
+  property_id: string | null;
+  tenants: { name: string } | null;
+  units: { name: string; properties: { name: string } | null } | null;
+};
+
 type Invoice = {
   id: string;
   lease_id: string;
@@ -67,6 +75,30 @@ export default function InvoicesPage(){
   const [generating,setGenerating]=useState(false);
   const [issuingId,setIssuingId]=useState<string|null>(null);
   const [message,setMessage]=useState("");
+  const [contracts,setContracts]=useState<ContractOption[]>([]);
+  const [selectedContracts,setSelectedContracts]=useState<string[]>([]);
+
+  async function loadContracts(){
+    const {data,error}=await supabase
+      .from("leases")
+      .select("id,tenant_id,property_id,tenants!leases_tenant_id_fkey(name),units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name))")
+      .in("status",["active","upcoming"])
+      .order("created_at");
+
+    if(error){
+      setMessage("Erro ao carregar contratos: "+error.message);
+      setContracts([]);
+      return;
+    }
+
+    const rows=(data as unknown as ContractOption[])??[];
+    setContracts(rows);
+
+    setSelectedContracts(prev=>{
+      if(prev.length>0) return prev.filter(id=>rows.some(r=>r.id===id));
+      return rows.map(r=>r.id);
+    });
+  }
 
   async function loadInvoices(){
     setLoading(true);
@@ -85,7 +117,10 @@ export default function InvoicesPage(){
     setLoading(false);
   }
 
-  useEffect(()=>{loadInvoices()},[period]);
+  useEffect(()=>{
+    loadContracts();
+    loadInvoices();
+  },[period]);
 
   const totals=useMemo(()=>invoices.reduce((acc,i)=>{
     acc.total+=Number(i.total)||0;
@@ -93,6 +128,20 @@ export default function InvoicesPage(){
     if(i.status==="overdue") acc.overdue+=Number(i.total)||0;
     return acc;
   },{total:0,paid:0,overdue:0}),[invoices]);
+
+  function toggleContract(id:string){
+    setSelectedContracts(prev=>
+      prev.includes(id)
+        ? prev.filter(x=>x!==id)
+        : [...prev,id]
+    );
+  }
+
+  function toggleAllContracts(){
+    setSelectedContracts(prev=>
+      prev.length===contracts.length ? [] : contracts.map(c=>c.id)
+    );
+  }
 
   async function generateInvoices(){
     setGenerating(true);
@@ -105,10 +154,17 @@ export default function InvoicesPage(){
       return;
     }
 
+    if(selectedContracts.length===0){
+      setGenerating(false);
+      setMessage("Selecione pelo menos um contrato para gerar faturas.");
+      return;
+    }
+
     const {data:charges,error}=await supabase
       .from("rent_charges")
       .select("id,lease_id,period,due_date,amount,status,leases!rent_charges_lease_id_fkey(property_id,tenant_id,tenants!leases_tenant_id_fkey(name),units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name)))")
-      .eq("period",period);
+      .eq("period",period)
+      .in("lease_id",selectedContracts.length?selectedContracts:["00000000-0000-0000-0000-000000000000"]);
 
     if(error){
       setGenerating(false);
@@ -256,6 +312,47 @@ export default function InvoicesPage(){
           {generating?"Gerando...":"Gerar faturas do mês"}
         </button>
       </div>
+    </div>
+
+    <div className="bg-white card-box border-20 mb-30">
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-20">
+        <div>
+          <h4 className="dash-title-three mb-1">Contratos para faturar</h4>
+          <p className="m0">Selecione quais contratos devem gerar faturas nesta competência.</p>
+        </div>
+        <button type="button" className="btn btn-outline-dark" onClick={toggleAllContracts}>
+          {selectedContracts.length===contracts.length&&contracts.length>0?"Desmarcar todos":"Selecionar todos"}
+        </button>
+      </div>
+
+      {contracts.length===0 ? (
+        <div className="alert alert-light border mb-0">Nenhum contrato ativo ou futuro encontrado.</div>
+      ) : (
+        <div className="row">
+          {contracts.map(contract=>(
+            <div key={contract.id} className="col-lg-6 mb-3">
+              <label
+                className="d-flex align-items-start gap-3 p-3 border rounded"
+                style={{cursor:"pointer"}}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedContracts.includes(contract.id)}
+                  onChange={()=>toggleContract(contract.id)}
+                  style={{marginTop:4}}
+                />
+                <span>
+                  <strong>{contract.units?.properties?.name??"Imóvel"}</strong>
+                  {" · "}
+                  {contract.units?.name??"Unidade"}
+                  <br/>
+                  <small>Locatário: {contract.tenants?.name??"—"}</small>
+                </span>
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
 
     <div className="row mb-30">
