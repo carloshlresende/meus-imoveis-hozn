@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DashboardHeaderTwo from "@/layouts/headers/dashboard/DashboardHeaderTwo";
-import DashboardHeaderOne from "@/layouts/headers/dashboard/DashboardHeaderOne";
 import Wrapper from "@/layouts/Wrapper";
 import { createClient } from "@/lib/supabase/client";
 
@@ -95,7 +94,6 @@ export default function EditPropertyPage() {
 
   return (
     <Wrapper>
-      <DashboardHeaderOne />
       <div className="dashboard-body">
         <div className="position-relative">
           <DashboardHeaderTwo title="Editar imóvel" />
