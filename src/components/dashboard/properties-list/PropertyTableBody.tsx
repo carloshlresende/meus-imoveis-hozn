@@ -14,6 +14,7 @@ type Property = {
   estimated_value: number | null;
   status: string | null;
   created_at: string;
+  image_url: string | null;
 };
 
 const money = (value: number | null) =>
@@ -39,7 +40,7 @@ const PropertyTableBody = () => {
 
     const { data, error } = await supabase
       .from("properties")
-      .select("id,name,address,city,state,type,estimated_value,status,created_at")
+      .select("id,name,address,city,state,type,estimated_value,status,created_at,image_url")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -105,7 +106,38 @@ const PropertyTableBody = () => {
       {properties.map((item) => (
         <tr key={item.id}>
           <td>
-            <div className="position-relative">
+            <div className="d-flex align-items-center gap-3">
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.name}
+                  style={{
+                    width: 92,
+                    height: 68,
+                    objectFit: "cover",
+                    borderRadius: 10,
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 92,
+                    height: 68,
+                    borderRadius: 10,
+                    background: "#eef1ef",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    fontSize: 12,
+                    color: "#65716b",
+                  }}
+                >
+                  Sem foto
+                </div>
+              )}
+
               <div>
                 <div className="property-name color-dark fw-500 fs-20">
                   {item.name}
