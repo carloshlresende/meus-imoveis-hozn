@@ -1,5 +1,7 @@
 "use client"
 import Image, { StaticImageData } from "next/image"
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 import NiceSelect from "@/ui/NiceSelect"
 import RecentMessage from "./RecentMessage"
 import DashboardHeaderTwo from "@/layouts/headers/dashboard/DashboardHeaderTwo"
@@ -18,35 +20,41 @@ interface DataType {
    class_name?: string;
 }
 
-const dashboard_card_data: DataType[] = [
-   {
-      id: 1,
-      icon: icon_1,
-      title: "Imóveis cadastrados",
-      value: "0",
-      class_name: "skew-none",
-   },
-   {
-      id: 2,
-      icon: icon_2,
-      title: "Contratos ativos",
-      value: "0",
-   },
-   {
-      id: 3,
-      icon: icon_3,
-      title: "Receita mensal",
-      value: "R$ 0",
-   },
-   {
-      id: 4,
-      icon: icon_4,
-      title: "Manutenções abertas",
-      value: "0",
-   },
-]
+
 
 const DashboardBody = () => {
+   const supabase = createClient();
+   const [cards, setCards] = useState<DataType[]>([
+      { id: 1, icon: icon_1, title: "Imóveis cadastrados", value: "0", class_name: "skew-none" },
+      { id: 2, icon: icon_2, title: "Contratos ativos", value: "0" },
+      { id: 3, icon: icon_3, title: "Recebido no mês", value: "R$ 0" },
+      { id: 4, icon: icon_4, title: "Manutenções abertas", value: "0" },
+   ]);
+
+   useEffect(() => {
+      async function loadSummary() {
+         const period = new Date().toISOString().slice(0, 7);
+         const [properties, leases, charges, maintenance] = await Promise.all([
+            supabase.from("properties").select("id", { count: "exact", head: true }),
+            supabase.from("leases").select("id", { count: "exact", head: true }).eq("status", "active"),
+            supabase.from("rent_charges").select("amount_paid").eq("period", period),
+            supabase.from("maintenance").select("id", { count: "exact", head: true }).neq("status", "completed"),
+         ]);
+
+         const received = (charges.data ?? []).reduce(
+            (sum, row: any) => sum + Number(row.amount_paid ?? 0),
+            0
+         );
+
+         setCards([
+            { id: 1, icon: icon_1, title: "Imóveis cadastrados", value: String(properties.count ?? 0), class_name: "skew-none" },
+            { id: 2, icon: icon_2, title: "Contratos ativos", value: String(leases.count ?? 0) },
+            { id: 3, icon: icon_3, title: "Recebido no mês", value: received.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) },
+            { id: 4, icon: icon_4, title: "Manutenções abertas", value: String(maintenance.count ?? 0) },
+         ]);
+      }
+      loadSummary();
+   }, []);
 
    const selectHandler = (e: any) => { };
 
@@ -58,7 +66,7 @@ const DashboardBody = () => {
             <h2 className="main-title d-block d-lg-none">Visão geral</h2>
             <div className="bg-white border-20">
                <div className="row">
-                  {dashboard_card_data.map((item) => (
+                  {cards.map((item) => (
                      <div key={item.id} className="col-lg-3 col-6">
                         <div className={`dash-card-one bg-white border-30 position-relative mb-15 ${item.class_name}`}>
                            <div className="d-sm-flex align-items-center justify-content-between">
