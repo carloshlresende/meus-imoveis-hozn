@@ -22,27 +22,27 @@ const dashboard_card_data: DataType[] = [
    {
       id: 1,
       icon: icon_1,
-      title: "All Properties",
-      value: "1.7k+",
+      title: "Imóveis cadastrados",
+      value: "0",
       class_name: "skew-none",
    },
    {
       id: 2,
       icon: icon_2,
-      title: "Total Pending",
-      value: "03",
+      title: "Contratos ativos",
+      value: "0",
    },
    {
       id: 3,
       icon: icon_3,
-      title: "Total Views",
-      value: "4.8k",
+      title: "Receita mensal",
+      value: "R$ 0",
    },
    {
       id: 4,
       icon: icon_4,
-      title: "Total Favourites",
-      value: "07",
+      title: "Manutenções abertas",
+      value: "0",
    },
 ]
 
@@ -53,9 +53,9 @@ const DashboardBody = () => {
    return (
       <div className="dashboard-body">
          <div className="position-relative">
-            <DashboardHeaderTwo title="Dashboard" />
+            <DashboardHeaderTwo title="Visão geral" />
 
-            <h2 className="main-title d-block d-lg-none">Dashboard</h2>
+            <h2 className="main-title d-block d-lg-none">Visão geral</h2>
             <div className="bg-white border-20">
                <div className="row">
                   {dashboard_card_data.map((item) => (
@@ -78,14 +78,14 @@ const DashboardBody = () => {
                <div className="col-xl-7 col-lg-6 d-flex flex-column">
                   <div className="user-activity-chart bg-white border-20 mt-30 h-100">
                      <div className="d-flex align-items-center justify-content-between plr">
-                        <h5 className="dash-title-two">Property View</h5>
+                        <h5 className="dash-title-two">Patrimônio</h5>
                         <div className="short-filter d-flex align-items-center">
-                           <div className="fs-16 me-2">Short by:</div>
+                           <div className="fs-16 me-2">Período:</div>
                            <NiceSelect className="nice-select fw-normal"
                               options={[
-                                 { value: "1", text: "Weekly" },
-                                 { value: "2", text: "Daily" },
-                                 { value: "3", text: "Monthly" },
+                                 { value: "1", text: "Semanal" },
+                                 { value: "2", text: "Diário" },
+                                 { value: "3", text: "Mensal" },
                               ]}
                               defaultCurrent={0}
                               onChange={selectHandler}
@@ -103,7 +103,7 @@ const DashboardBody = () => {
 
                <div className="col-xl-5 col-lg-6 d-flex">
                   <div className="recent-job-tab bg-white border-20 mt-30 plr w-100">
-                     <h5 className="dash-title-two">Recent Message</h5>
+                     <h5 className="dash-title-two">Atividades recentes</h5>
                      <RecentMessage/>
                   </div>
                </div>
