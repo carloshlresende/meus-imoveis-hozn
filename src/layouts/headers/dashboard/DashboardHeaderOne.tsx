@@ -86,6 +86,13 @@ const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
                      </Link>
                   </li>
 
+                  <li className="plr">
+                     <Link href="/dashboard/contract-templates" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/contract-templates' ? 'active' : ''}`}>
+                        <Image src={pathname === '/dashboard/contract-templates' ? dashboardIconActive_7 : dashboardIcon_7} alt="" />
+                        <span>Modelos de contrato</span>
+                     </Link>
+                  </li>
+
                   <li className="bottom-line pt-30 lg-pt-20 mb-40 lg-mb-30"></li>
                   <li><div className="nav-title">Minha conta</div></li>
 
