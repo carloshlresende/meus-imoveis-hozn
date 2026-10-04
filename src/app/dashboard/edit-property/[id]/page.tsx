@@ -27,6 +27,9 @@ export default function EditPropertyPage() {
   const [bathrooms, setBathrooms] = useState("");
   const [estimatedValue, setEstimatedValue] = useState("");
   const [status, setStatus] = useState("vacant");
+  const [waterAccountNumber, setWaterAccountNumber] = useState("");
+  const [electricityAccountNumber, setElectricityAccountNumber] = useState("");
+  const [utilityTransferNotes, setUtilityTransferNotes] = useState("");
 
   useEffect(() => {
     async function loadProperty() {
@@ -52,6 +55,9 @@ export default function EditPropertyPage() {
       setBathrooms(data.bathrooms?.toString() ?? "");
       setEstimatedValue(data.estimated_value?.toString() ?? "");
       setStatus(data.status ?? "vacant");
+      setWaterAccountNumber(data.water_account_number ?? "");
+      setElectricityAccountNumber(data.electricity_account_number ?? "");
+      setUtilityTransferNotes(data.utility_transfer_notes ?? "");
       setLoading(false);
     }
 
@@ -78,6 +84,11 @@ export default function EditPropertyPage() {
           ? Number(estimatedValue.replace(",", "."))
           : null,
         status,
+        water_provider: "SABESP",
+        water_account_number: waterAccountNumber.trim() || null,
+        electricity_provider: "CPFL",
+        electricity_account_number: electricityAccountNumber.trim() || null,
+        utility_transfer_notes: utilityTransferNotes.trim() || null,
       })
       .eq("id", id);
 
@@ -238,6 +249,36 @@ export default function EditPropertyPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="bg-white card-box border-20 mt-40">
+                <h4 className="dash-title-three">Água e energia</h4>
+                <div className="row">
+                  <div className="col-md-6">
+                    <div className="dash-input-wrapper mb-30">
+                      <label>RGI SABESP</label>
+                      <input type="text" value={waterAccountNumber} onChange={(e)=>setWaterAccountNumber(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="dash-input-wrapper mb-30">
+                      <label>Instalação / UC CPFL</label>
+                      <input type="text" value={electricityAccountNumber} onChange={(e)=>setElectricityAccountNumber(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="col-12">
+                    <div className="dash-input-wrapper mb-30">
+                      <label>Observações sobre transferência de titularidade</label>
+                      <textarea className="size-lg" value={utilityTransferNotes} onChange={(e)=>setUtilityTransferNotes(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-30">
+                <a className="dash-btn-two tran3s" href={`/dashboard/property-documents/${id}`}>
+                  Documentos do imóvel
+                </a>
               </div>
 
               {message && <p className="mt-30">{message}</p>}
