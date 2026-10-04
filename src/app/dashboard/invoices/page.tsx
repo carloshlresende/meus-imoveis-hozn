@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Wrapper from "@/layouts/Wrapper";
 import DashboardHeaderTwo from "@/layouts/headers/dashboard/DashboardHeaderTwo";
 import { createClient } from "@/lib/supabase/client";
@@ -532,9 +533,9 @@ export default function InvoicesPage(){
               <tr key={i.id}>
                 <td className="px-3 py-3">
                   <div className="d-flex flex-wrap gap-2 align-items-center">
-                    <button className="btn btn-sm btn-link p-0 text-decoration-none" onClick={()=>{}}>
+                    <Link className="btn btn-sm btn-link p-0 text-decoration-none" href={`/dashboard/invoices/${i.id}`}>
                       👁 Visualizar
-                    </button>
+                    </Link>
 
                     {i.payment_mode!=="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&(
                       <button className="btn btn-sm btn-link p-0 text-decoration-none" disabled={issuingId===i.id} onClick={()=>issueAsaas(i)}>
@@ -551,6 +552,12 @@ export default function InvoicesPage(){
                     {i.payment_mode==="manual_pix"&&i.status!=="paid"&&(
                       <button className="btn btn-sm btn-link p-0 text-decoration-none" onClick={()=>markManualPix(i)}>
                         Editar PIX
+                      </button>
+                    )}
+
+                    {i.payment_mode==="manual_pix"&&!i.asaas_payment_id&&i.status!=="paid"&&(
+                      <button className="btn btn-sm btn-link p-0 text-decoration-none" onClick={()=>switchToAsaas(i)}>
+                        Trocar para boleto
                       </button>
                     )}
                   </div>
