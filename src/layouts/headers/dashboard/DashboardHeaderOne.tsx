@@ -72,6 +72,20 @@ const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
                      </Link>
                   </li>
 
+                  <li className="plr">
+                     <Link href="/dashboard/contracts" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/contracts' ? 'active' : ''}`}>
+                        <Image src={pathname === '/dashboard/contracts' ? dashboardIconActive_3 : dashboardIcon_3} alt="" />
+                        <span>Contratos</span>
+                     </Link>
+                  </li>
+
+                  <li className="plr">
+                     <Link href="/dashboard/rent" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/rent' ? 'active' : ''}`}>
+                        <Image src={pathname === '/dashboard/rent' ? dashboardIconActive_4 : dashboardIcon_4} alt="" />
+                        <span>Financeiro</span>
+                     </Link>
+                  </li>
+
                   <li className="bottom-line pt-30 lg-pt-20 mb-40 lg-mb-30"></li>
                   <li><div className="nav-title">Minha conta</div></li>
 
