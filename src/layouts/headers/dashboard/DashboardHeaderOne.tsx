@@ -1,7 +1,8 @@
 "use client"
 import Image from "next/image"
 import Link from "next/link";
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from "@/lib/supabase/client"
 
 import dashboardLogo from "@/assets/images/logo/logo_01.svg";
 import dashboardIconActive_1 from "@/assets/images/dashboard/icon/icon_1_active.svg";
@@ -18,6 +19,14 @@ import dashboardIcon_11 from "@/assets/images/dashboard/icon/icon_41.svg";
 
 const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
    const pathname = usePathname();
+   const router = useRouter();
+   const supabase = createClient();
+
+   const handleLogout = async () => {
+      await supabase.auth.signOut();
+      router.push("/login");
+      router.refresh();
+   };
 
    return (
       <aside className={`dash-aside-navbar ${isActive ? "show" : ""}`}>
@@ -82,10 +91,10 @@ const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
             </div>
 
             <div className="plr">
-               <Link href="#" className="d-flex w-100 align-items-center logout-btn">
+               <button onClick={handleLogout} className="d-flex w-100 align-items-center logout-btn border-0 bg-transparent">
                   <div className="icon tran3s d-flex align-items-center justify-content-center rounded-circle"><Image src={dashboardIcon_11} alt="" /></div>
                   <span>Sair</span>
-               </Link>
+               </button>
             </div>
          </div>
       </aside>
