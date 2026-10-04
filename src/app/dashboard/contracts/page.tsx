@@ -1,6 +1,7 @@
 "use client"
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Wrapper from "@/layouts/Wrapper";
 import DashboardHeaderTwo from "@/layouts/headers/dashboard/DashboardHeaderTwo";
 import { createClient } from "@/lib/supabase/client";
@@ -335,7 +336,8 @@ export default function ContractsPage() {
                       <td>{l.start_date ? new Date(l.start_date+"T12:00:00").toLocaleDateString("pt-BR") : "—"}<br/><small>até {l.end_date ? new Date(l.end_date+"T12:00:00").toLocaleDateString("pt-BR") : "—"}</small></td>
                       <td>{money(l.rent_amount)}<br/><small>vence dia {l.due_day ?? "—"}</small></td>
                       <td>{l.status === "active" ? "Ativo" : l.status === "upcoming" ? "Futuro" : l.status === "ended" ? "Encerrado" : "Cancelado"}</td>
-                      <td><div className="d-flex gap-2">
+                      <td><div className="d-flex gap-2 flex-wrap">
+                        <Link className="btn btn-sm btn-dark" href={`/dashboard/contracts/${l.id}/generate`}>Gerar PDF</Link>
                         <button className="btn btn-sm btn-outline-dark" onClick={()=>editLease(l)}>Editar</button>
                         <button className="btn btn-sm btn-outline-danger" onClick={()=>remove(l)}>Excluir</button>
                       </div></td>
