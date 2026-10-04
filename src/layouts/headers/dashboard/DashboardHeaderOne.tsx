@@ -80,9 +80,9 @@ const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
                   </li>
 
                   <li className="plr">
-                     <Link href="/dashboard/rent" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/rent' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/rent' ? dashboardIconActive_4 : dashboardIcon_4} alt="" />
-                        <span>Financeiro</span>
+                     <Link href="/dashboard/invoices" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/invoices' ? 'active' : ''}`}>
+                        <Image src={pathname === '/dashboard/invoices' ? dashboardIconActive_4 : dashboardIcon_4} alt="" />
+                        <span>Faturas</span>
                      </Link>
                   </li>
 
