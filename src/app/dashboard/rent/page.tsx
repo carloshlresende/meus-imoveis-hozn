@@ -51,7 +51,7 @@ export default function RentPage() {
     setLoading(true);
     const {data,error}=await supabase
       .from("rent_charges")
-      .select("id,lease_id,period,due_date,amount,amount_paid,status,leases(tenant_id,unit_id,tenants(name),units(name,properties(name)))")
+      .select("id,lease_id,period,due_date,amount,amount_paid,status,leases!rent_charges_lease_id_fkey(tenant_id,unit_id,tenants!leases_tenant_id_fkey(name),units!leases_unit_id_fkey(name,properties!units_property_id_fkey(name))))")
       .eq("period",period)
       .order("due_date");
     if(error){setMessage("Erro ao carregar cobranças: "+error.message);setCharges([])}
