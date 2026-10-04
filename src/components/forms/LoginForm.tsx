@@ -1,16 +1,11 @@
 "use client"
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
 import * as yup from "yup";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-
-import OpenEye from "@/assets/images/icon/icon_68.svg";
 
 interface FormData {
   email: string;
@@ -36,89 +31,155 @@ const LoginForm = () => {
 
   const [isPasswordVisible, setPasswordVisibility] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
+    setAuthMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
+    try {
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email.trim(),
+        password: data.password,
+      });
 
-    setLoading(false);
+      if (error) {
+        setAuthMessage(`Supabase: ${error.message}`);
+        setLoading(false);
+        return;
+      }
 
-    if (error) {
-      toast.error("E-mail ou senha inválidos.");
-      return;
+      if (!authData.session) {
+        setAuthMessage("O login não criou uma sessão. Verifique o usuário no Supabase.");
+        setLoading(false);
+        return;
+      }
+
+      router.replace("/dashboard/dashboard-index");
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Erro desconhecido ao entrar.";
+      setAuthMessage(`Erro: ${message}`);
+      setLoading(false);
     }
-
-    toast.success("Login realizado com sucesso.");
-    router.push("/dashboard/dashboard-index");
-    router.refresh();
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="row">
-        <div className="col-12">
-          <div className="input-group-meta position-relative mb-25">
-            <label>E-mail*</label>
-            <input
-              type="email"
-              {...register("email")}
-              placeholder="seuemail@exemplo.com"
-            />
-            <p className="form_error">{errors.email?.message}</p>
-          </div>
-        </div>
+      <div className="mb-20">
+        <label
+          htmlFor="login-email"
+          style={{ display: "block", marginBottom: 6, fontSize: 15 }}
+        >
+          E-mail
+        </label>
+        <input
+          id="login-email"
+          type="email"
+          {...register("email")}
+          placeholder="seuemail@exemplo.com"
+          autoComplete="email"
+          style={{
+            width: "100%",
+            height: 52,
+            border: "1px solid #d9dedc",
+            borderRadius: 8,
+            padding: "0 16px",
+            background: "#f7f8f8",
+          }}
+        />
+        {errors.email?.message && (
+          <p style={{ color: "#b42318", marginTop: 6 }}>
+            {errors.email.message}
+          </p>
+        )}
+      </div>
 
-        <div className="col-12">
-          <div className="input-group-meta position-relative mb-20">
-            <label>Senha*</label>
-            <input
-              type={isPasswordVisible ? "text" : "password"}
-              {...register("password")}
-              placeholder="Digite sua senha"
-              className="pass_log_id"
-            />
+      <div className="mb-20">
+        <label
+          htmlFor="login-password"
+          style={{ display: "block", marginBottom: 6, fontSize: 15 }}
+        >
+          Senha
+        </label>
 
-            <span className="placeholder_icon">
-              <span
-                className={`passVicon ${isPasswordVisible ? "eye-slash" : ""}`}
-              >
-                <Image
-                  onClick={() => setPasswordVisibility(!isPasswordVisible)}
-                  src={OpenEye}
-                  alt=""
-                />
-              </span>
-            </span>
+        <div style={{ position: "relative" }}>
+          <input
+            id="login-password"
+            type={isPasswordVisible ? "text" : "password"}
+            {...register("password")}
+            placeholder="Digite sua senha"
+            autoComplete="current-password"
+            style={{
+              width: "100%",
+              height: 52,
+              border: "1px solid #d9dedc",
+              borderRadius: 8,
+              padding: "0 52px 0 16px",
+              background: "#f7f8f8",
+            }}
+          />
 
-            <p className="form_error">{errors.password?.message}</p>
-          </div>
-        </div>
-
-        <div className="col-12">
-          <div className="agreement-checkbox d-flex justify-content-between align-items-center">
-            <div>
-              <input type="checkbox" id="remember" />
-              <label htmlFor="remember">Manter conectado</label>
-            </div>
-
-            <Link href="#">Esqueci minha senha</Link>
-          </div>
-        </div>
-
-        <div className="col-12">
           <button
-            type="submit"
-            className="btn-two w-100 text-uppercase d-block mt-20"
-            disabled={loading}
+            type="button"
+            onClick={() => setPasswordVisibility(!isPasswordVisible)}
+            aria-label={isPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
+            style={{
+              position: "absolute",
+              right: 10,
+              top: "50%",
+              transform: "translateY(-50%)",
+              border: 0,
+              background: "transparent",
+              cursor: "pointer",
+              fontSize: 13,
+            }}
           >
-            {loading ? "Entrando..." : "Entrar"}
+            {isPasswordVisible ? "Ocultar" : "Mostrar"}
           </button>
         </div>
+
+        {errors.password?.message && (
+          <p style={{ color: "#b42318", marginTop: 6 }}>
+            {errors.password.message}
+          </p>
+        )}
       </div>
+
+      {authMessage && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 18,
+            padding: "12px 14px",
+            border: "1px solid #f1b7b2",
+            borderRadius: 8,
+            background: "#fff4f2",
+            color: "#8a1c13",
+            fontSize: 14,
+          }}
+        >
+          {authMessage}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        style={{
+          width: "100%",
+          height: 52,
+          border: 0,
+          borderRadius: 8,
+          background: "#254035",
+          color: "#fff",
+          fontWeight: 600,
+          cursor: loading ? "wait" : "pointer",
+        }}
+      >
+        {loading ? "Entrando..." : "Entrar"}
+      </button>
     </form>
   );
 };
