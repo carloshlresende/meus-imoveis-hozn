@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/client"
 
 import dashboardLogo from "@/assets/images/logo/logo_01.svg";
 import dashboardIconActive_1 from "@/assets/images/dashboard/icon/icon_1_active.svg";
+import dashboardIconActive_2 from "@/assets/images/dashboard/icon/icon_2_active.svg";
 import dashboardIcon_1 from "@/assets/images/dashboard/icon/icon_1.svg";
+import dashboardIcon_2 from "@/assets/images/dashboard/icon/icon_2.svg";
 import dashboardIconActive_3 from "@/assets/images/dashboard/icon/icon_3_active.svg";
 import dashboardIcon_3 from "@/assets/images/dashboard/icon/icon_3.svg";
 import dashboardIconActive_4 from "@/assets/images/dashboard/icon/icon_4_active.svg";
@@ -60,6 +62,13 @@ const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
                      <Link href="/dashboard/add-property" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/add-property' ? 'active' : ''}`}>
                         <Image src={pathname === '/dashboard/add-property' ? dashboardIconActive_7 : dashboardIcon_7} alt="" />
                         <span>Adicionar imóvel</span>
+                     </Link>
+                  </li>
+
+                  <li className="plr">
+                     <Link href="/dashboard/tenants" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/tenants' ? 'active' : ''}`}>
+                        <Image src={pathname === '/dashboard/tenants' ? dashboardIconActive_2 : dashboardIcon_2} alt="" />
+                        <span>Locatários</span>
                      </Link>
                   </li>
 
