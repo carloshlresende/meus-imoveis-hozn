@@ -22,6 +22,9 @@ const AddPropertyBody = () => {
   const [bathrooms, setBathrooms] = useState("");
   const [estimatedValue, setEstimatedValue] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [waterAccountNumber, setWaterAccountNumber] = useState("");
+  const [electricityAccountNumber, setElectricityAccountNumber] = useState("");
+  const [utilityTransferNotes, setUtilityTransferNotes] = useState("");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -81,6 +84,11 @@ const AddPropertyBody = () => {
         : null,
       status: "vacant",
       image_url: imageUrl,
+      water_provider: "SABESP",
+      water_account_number: waterAccountNumber.trim() || null,
+      electricity_provider: "CPFL",
+      electricity_account_number: electricityAccountNumber.trim() || null,
+      utility_transfer_notes: utilityTransferNotes.trim() || null,
     });
 
     setSaving(false);
@@ -231,6 +239,49 @@ const AddPropertyBody = () => {
                     placeholder="SP"
                     value={state}
                     onChange={(e) => setState(e.target.value.toUpperCase())}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white card-box border-20 mt-40">
+            <h4 className="dash-title-three">Água e energia</h4>
+            <p className="mb-30">Esses dados poderão ser usados automaticamente nos contratos.</p>
+
+            <div className="row">
+              <div className="col-md-6">
+                <div className="dash-input-wrapper mb-30">
+                  <label>RGI SABESP</label>
+                  <input
+                    type="text"
+                    placeholder="Número do RGI"
+                    value={waterAccountNumber}
+                    onChange={(e) => setWaterAccountNumber(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="col-md-6">
+                <div className="dash-input-wrapper mb-30">
+                  <label>Instalação / UC CPFL</label>
+                  <input
+                    type="text"
+                    placeholder="Número da instalação ou UC"
+                    value={electricityAccountNumber}
+                    onChange={(e) => setElectricityAccountNumber(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="col-12">
+                <div className="dash-input-wrapper mb-30">
+                  <label>Observações sobre transferência de titularidade</label>
+                  <textarea
+                    className="size-lg"
+                    value={utilityTransferNotes}
+                    onChange={(e) => setUtilityTransferNotes(e.target.value)}
+                    placeholder="Ex.: água e energia devem ser transferidas para o nome do locatário."
                   />
                 </div>
               </div>
