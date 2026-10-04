@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { jsPDF } from "jspdf";
+import { PDFDocument } from "pdf-lib";
 import Wrapper from "@/layouts/Wrapper";
 import DashboardHeaderTwo from "@/layouts/headers/dashboard/DashboardHeaderTwo";
 import { createClient } from "@/lib/supabase/client";
@@ -197,6 +198,42 @@ export default function InvoiceDetailPage(){
     return pdf;
   }
 
+  function base64ToUint8Array(base64:string){
+    const binary=atob(base64);
+    const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    return bytes;
+  }
+
+  async function buildFinalPdfBlob(){
+    const invoicePdf=buildPdf();
+    if(!invoicePdf)return null;
+
+    const invoiceBytes=new Uint8Array(invoicePdf.output("arraybuffer"));
+    const finalPdf=await PDFDocument.create();
+    const sourceInvoice=await PDFDocument.load(invoiceBytes);
+    const invoicePages=await finalPdf.copyPages(sourceInvoice,sourceInvoice.getPageIndices());
+    invoicePages.forEach(page=>finalPdf.addPage(page));
+
+    if(invoice?.payment_mode!=="manual_pix"&&invoice?.asaas_bank_slip_url){
+      const {data,error}=await supabase.functions.invoke("asaas-fetch-bank-slip",{
+        body:{invoice_id:invoice.id}
+      });
+
+      if(error||data?.error||!data?.base64){
+        throw new Error(data?.error||error?.message||"Não foi possível obter o boleto do Asaas.");
+      }
+
+      const boletoBytes=base64ToUint8Array(data.base64);
+      const boletoPdf=await PDFDocument.load(boletoBytes);
+      const boletoPages=await finalPdf.copyPages(boletoPdf,boletoPdf.getPageIndices());
+      boletoPages.forEach(page=>finalPdf.addPage(page));
+    }
+
+    const mergedBytes=await finalPdf.save();
+    return new Blob([mergedBytes],{type:"application/pdf"});
+  }
+
   async function generateAndArchive(){
     if(!invoice)return;
     setGenerating(true);
@@ -205,56 +242,60 @@ export default function InvoiceDetailPage(){
     const {data:{user}}=await supabase.auth.getUser();
     if(!user){setGenerating(false);return;}
 
-    const pdf=buildPdf();
-    if(!pdf){setGenerating(false);return;}
+    try{
+      const blob=await buildFinalPdfBlob();
+      if(!blob){setGenerating(false);return;}
 
-    const blob=pdf.output("blob");
-    const storagePath=`${user.id}/invoices/${invoice.id}/${crypto.randomUUID()}.pdf`;
+      const storagePath=`${user.id}/invoices/${invoice.id}/${crypto.randomUUID()}.pdf`;
 
-    const {error:uploadError}=await supabase.storage
-      .from("private-documents")
-      .upload(storagePath,blob,{contentType:"application/pdf",upsert:false});
+      const {error:uploadError}=await supabase.storage
+        .from("private-documents")
+        .upload(storagePath,blob,{contentType:"application/pdf",upsert:false});
 
-    if(uploadError){
+      if(uploadError)throw new Error("Erro ao armazenar PDF: "+uploadError.message);
+
+      const {data:doc,error:docError}=await supabase.from("documents").insert({
+        user_id:user.id,
+        property_id:invoice.property_id,
+        tenant_id:invoice.tenant_id,
+        lease_id:invoice.lease_id,
+        name:`Fatura ${reference} - ${tenant?.name||"Locatário"}`,
+        document_type:invoice.payment_mode==="manual_pix"?"Fatura":"Fatura + boleto Asaas",
+        storage_path:storagePath,
+        file_url:null,
+        is_private:true,
+      }).select("id").single();
+
+      if(docError||!doc){
+        await supabase.storage.from("private-documents").remove([storagePath]);
+        throw new Error("Erro ao registrar PDF: "+(docError?.message||""));
+      }
+
+      const {error:updateError}=await supabase.from("invoices").update({
+        invoice_document_id:doc.id,
+        updated_at:new Date().toISOString(),
+      }).eq("id",invoice.id);
+
+      if(updateError)throw new Error("PDF salvo, mas houve erro ao vincular à fatura: "+updateError.message);
+
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("a");
+      link.href=url;
+      link.download=`fatura-${reference.replace("/","-")}-${(tenant?.name||"locatario").replace(/[^a-zA-Z0-9]+/g,"-").toLowerCase()}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      setMessage(
+        invoice.payment_mode==="manual_pix"
+          ?"Fatura PDF gerada e arquivada."
+          :"PDF único gerado: fatura da imobiliária + boleto oficial Asaas."
+      );
+      await load();
+    }catch(err){
+      setMessage(err instanceof Error?err.message:"Erro ao gerar PDF.");
+    }finally{
       setGenerating(false);
-      setMessage("Erro ao armazenar PDF: "+uploadError.message);
-      return;
     }
-
-    const {data:doc,error:docError}=await supabase.from("documents").insert({
-      user_id:user.id,
-      property_id:invoice.property_id,
-      tenant_id:invoice.tenant_id,
-      lease_id:invoice.lease_id,
-      name:`Fatura ${reference} - ${tenant?.name||"Locatário"}`,
-      document_type:"Fatura",
-      storage_path:storagePath,
-      file_url:null,
-      is_private:true,
-    }).select("id").single();
-
-    if(docError||!doc){
-      await supabase.storage.from("private-documents").remove([storagePath]);
-      setGenerating(false);
-      setMessage("Erro ao registrar PDF: "+(docError?.message||""));
-      return;
-    }
-
-    const {error:updateError}=await supabase.from("invoices").update({
-      invoice_document_id:doc.id,
-      updated_at:new Date().toISOString(),
-    }).eq("id",invoice.id);
-
-    if(updateError){
-      setGenerating(false);
-      setMessage("PDF salvo, mas houve erro ao vincular à fatura: "+updateError.message);
-      return;
-    }
-
-    pdf.save(`fatura-${reference.replace("/","-")}-${(tenant?.name||"locatario").replace(/[^a-zA-Z0-9]+/g,"-").toLowerCase()}.pdf`);
-    setGenerating(false);
-    setMessage("Fatura PDF gerada, baixada e arquivada com segurança.");
-    await load();
   }
 
   async function openArchived(){
@@ -337,7 +378,7 @@ export default function InvoiceDetailPage(){
 
     <div className="d-flex flex-wrap gap-2 justify-content-center">
       <button className="dash-btn-two tran3s" onClick={generateAndArchive} disabled={generating}>
-        {generating?"Gerando...":"Gerar e arquivar PDF"}
+        {generating?"Gerando...":invoice?.payment_mode==="manual_pix"?"Gerar fatura PDF":"Gerar fatura + boleto PDF"}
       </button>
       {invoice?.invoice_document_id&&<button className="btn btn-outline-dark" onClick={openArchived}>Abrir PDF arquivado</button>}
     </div>
