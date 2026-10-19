@@ -139,9 +139,12 @@ const PropertyTableBody = () => {
               )}
 
               <div>
-                <div className="property-name color-dark fw-500 fs-20">
+                <Link
+                  href={`/dashboard/property/${item.id}`}
+                  className="property-name color-dark fw-500 fs-20"
+                >
                   {item.name}
-                </div>
+                </Link>
                 <div className="address">
                   {item.address}
                   {item.city ? ` · ${item.city}` : ""}
@@ -179,6 +182,14 @@ const PropertyTableBody = () => {
               </button>
 
               <ul className="dropdown-menu dropdown-menu-end">
+                <li>
+                  <Link
+                    className="dropdown-item"
+                    href={`/dashboard/property/${item.id}`}
+                  >
+                    Abrir imóvel
+                  </Link>
+                </li>
                 <li>
                   <Link
                     className="dropdown-item"
