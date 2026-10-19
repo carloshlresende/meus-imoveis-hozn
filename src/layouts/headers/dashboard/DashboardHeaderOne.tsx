@@ -1,7 +1,7 @@
 "use client"
 import Image from "next/image"
 import Link from "next/link";
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 import dashboardLogo from "@/assets/images/logo/logo_01.svg";
@@ -30,94 +30,72 @@ const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
       router.refresh();
    };
 
+   const icon = (href:string, kind:number) => {
+      const active = pathname === href || pathname.startsWith(href + "/");
+      if (kind === 1) return active ? dashboardIconActive_1 : dashboardIcon_1;
+      if (kind === 2) return active ? dashboardIconActive_2 : dashboardIcon_2;
+      if (kind === 3) return active ? dashboardIconActive_3 : dashboardIcon_3;
+      if (kind === 4) return active ? dashboardIconActive_4 : dashboardIcon_4;
+      if (kind === 6) return active ? dashboardIconActive_6 : dashboardIcon_6;
+      return active ? dashboardIconActive_7 : dashboardIcon_7;
+   };
+
+   const item = (href:string, label:string, kind:number=7) => (
+      <li className="plr">
+         <Link href={href} className={`d-flex w-100 align-items-center ${pathname === href || pathname.startsWith(href + "/") ? "active" : ""}`}>
+            <Image src={icon(href, kind)} alt="" />
+            <span>{label}</span>
+         </Link>
+      </li>
+   );
+
    return (
       <aside className={`dash-aside-navbar ${isActive ? "show" : ""}`}>
          <div className="position-relative">
             <div className="logo d-md-block d-flex align-items-center justify-content-between plr bottom-line pb-30">
-               <Link href="/dashboard/dashboard-index">
-                  <Image src={dashboardLogo} alt="Meu Patrimônio" />
-               </Link>
+               <Link href="/dashboard/dashboard-index"><Image src={dashboardLogo} alt="Meu Patrimônio" /></Link>
                <button onClick={() => setIsActive(false)} className="close-btn d-block d-md-none"><i className="fa-light fa-circle-xmark"></i></button>
             </div>
 
             <nav className="dasboard-main-nav pt-30 pb-30 bottom-line">
                <ul className="style-none">
-                  <li><div className="nav-title">Gestão patrimonial</div></li>
+                  <li><div className="nav-title">Visão geral</div></li>
+                  {item("/dashboard/dashboard-index","Painel",1)}
 
-                  <li className="plr">
-                     <Link href="/dashboard/dashboard-index" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/dashboard-index' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/dashboard-index' ? dashboardIconActive_1 : dashboardIcon_1} alt="" />
-                        <span>Visão geral</span>
-                     </Link>
-                  </li>
+                  <li className="pt-20"><div className="nav-title">Cadastros</div></li>
+                  {item("/dashboard/properties-list","Imóveis",6)}
+                  {item("/dashboard/owners","Proprietários",2)}
+                  {item("/dashboard/tenants","Inquilinos",2)}
+                  {item("/dashboard/add-property","Adicionar imóvel",7)}
 
-                  <li className="plr">
-                     <Link href="/dashboard/properties-list" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/properties-list' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/properties-list' ? dashboardIconActive_6 : dashboardIcon_6} alt="" />
-                        <span>Meus imóveis</span>
-                     </Link>
-                  </li>
+                  <li className="pt-20"><div className="nav-title">Locação</div></li>
+                  {item("/dashboard/contracts","Locações",3)}
+                  {item("/dashboard/lease-contracts","Contratos",3)}
+                  {item("/dashboard/contract-templates","Modelos contratuais",7)}
+                  {item("/dashboard/adjustments","Reajustes",7)}
 
-                  <li className="plr">
-                     <Link href="/dashboard/add-property" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/add-property' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/add-property' ? dashboardIconActive_7 : dashboardIcon_7} alt="" />
-                        <span>Adicionar imóvel</span>
-                     </Link>
-                  </li>
+                  <li className="pt-20"><div className="nav-title">Financeiro</div></li>
+                  {item("/dashboard/invoices","Cobranças / Faturas",4)}
+                  {item("/dashboard/rent","Recebimentos",4)}
+                  {item("/dashboard/expenses","Despesas",4)}
 
-                  <li className="plr">
-                     <Link href="/dashboard/tenants" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/tenants' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/tenants' ? dashboardIconActive_2 : dashboardIcon_2} alt="" />
-                        <span>Locatários</span>
-                     </Link>
-                  </li>
+                  <li className="pt-20"><div className="nav-title">Operação</div></li>
+                  {item("/dashboard/inspections","Vistorias",7)}
 
-                  <li className="plr">
-                     <Link href="/dashboard/contracts" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/contracts' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/contracts' ? dashboardIconActive_3 : dashboardIcon_3} alt="" />
-                        <span>Contratos</span>
-                     </Link>
-                  </li>
+                  <li className="pt-20"><div className="nav-title">Comunicação</div></li>
+                  {item("/dashboard/message","Mensagens",2)}
 
-                  <li className="plr">
-                     <Link href="/dashboard/invoices" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/invoices' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/invoices' ? dashboardIconActive_4 : dashboardIcon_4} alt="" />
-                        <span>Faturas</span>
-                     </Link>
-                  </li>
-
-                  <li className="plr">
-                     <Link href="/dashboard/contract-templates" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/contract-templates' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/contract-templates' ? dashboardIconActive_7 : dashboardIcon_7} alt="" />
-                        <span>Modelos de contrato</span>
-                     </Link>
-                  </li>
-
-                  <li className="bottom-line pt-30 lg-pt-20 mb-40 lg-mb-30"></li>
+                  <li className="bottom-line pt-30 lg-pt-20 mb-30 lg-mb-20"></li>
                   <li><div className="nav-title">Minha conta</div></li>
-
-                  <li className="plr">
-                     <Link href="/dashboard/profile" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/profile' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/profile' ? dashboardIconActive_3 : dashboardIcon_3} alt="" />
-                        <span>Perfil</span>
-                     </Link>
-                  </li>
-
-                  <li className="plr">
-                     <Link href="/dashboard/account-settings" className={`d-flex w-100 align-items-center ${pathname === '/dashboard/account-settings' ? 'active' : ''}`}>
-                        <Image src={pathname === '/dashboard/account-settings' ? dashboardIconActive_4 : dashboardIcon_4} alt="" />
-                        <span>Configurações</span>
-                     </Link>
-                  </li>
+                  {item("/dashboard/profile","Perfil",3)}
+                  {item("/dashboard/account-settings","Configurações",4)}
                </ul>
             </nav>
 
             <div className="profile-complete-status bottom-line pb-35 plr">
-               <div className="progress-value fw-500">Fase 1</div>
-               <div className="progress-line position-relative">
-                  <div className="inner-line" style={{ width: "35%" }}></div>
-               </div>
-               <p>Gestão dos seus próprios imóveis</p>
+               <div className="progress-value fw-500">Meu Patrimônio</div>
+               <div className="progress-line position-relative"><div className="inner-line" style={{ width: "70%" }}></div></div>
+               <p>Gestão imobiliária integrada</p>
             </div>
 
             <div className="plr">
