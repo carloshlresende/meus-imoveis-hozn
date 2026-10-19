@@ -16,7 +16,11 @@ const ProfileBody = () => {
    const [lastName, setLastName] = useState("");
    const [phoneNumber, setPhoneNumber] = useState("");
    const [about, setAbout] = useState("");
-   const token = localStorage.getItem("token"); 
+   const [token, setToken] = useState<string | null>(null);
+
+   useEffect(() => {
+      setToken(localStorage.getItem("token"));
+   }, []);
 
    useEffect(() => {
       const fetchUserData = async () => {
@@ -43,8 +47,10 @@ const ProfileBody = () => {
          }
       };
 
-      fetchUserData();
-   }, []);
+      if (token) {
+         fetchUserData();
+      }
+   }, [token]);
 
    const handleSave = async () => {
       try {
