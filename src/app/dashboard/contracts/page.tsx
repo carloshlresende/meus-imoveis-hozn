@@ -173,7 +173,7 @@ export default function ContractsPage() {
 
     if (result.error) {
       setSaving(false);
-      setMessage("Erro ao salvar contrato: " + result.error.message);
+      setMessage("Erro ao salvar locação: " + result.error.message);
       return;
     }
 
@@ -193,10 +193,10 @@ export default function ContractsPage() {
   }
 
   async function remove(lease: Lease) {
-    if (!window.confirm("Excluir este contrato e todas as cobranças/pagamentos vinculados?")) return;
+    if (!window.confirm("Excluir esta locação e todas as cobranças/pagamentos vinculados?")) return;
     const { error } = await supabase.from("leases").delete().eq("id", lease.id);
     if (error) {
-      alert("Erro ao excluir contrato: " + error.message);
+      alert("Erro ao excluir locação: " + error.message);
       return;
     }
     if (lease.unit_id) {
@@ -212,16 +212,16 @@ export default function ContractsPage() {
     <Wrapper>
       <div className="dashboard-body">
         <div className="position-relative">
-          <DashboardHeaderTwo title="Contratos" />
-          <h2 className="main-title d-block d-lg-none">Contratos</h2>
+          <DashboardHeaderTwo title="Locações" />
+          <h2 className="main-title d-block d-lg-none">Locações</h2>
 
           <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-25">
             <div>
-              <h4 className="dash-title-two mb-1">Contratos de locação</h4>
-              <p className="m0">Vincule imóvel, unidade e locatário e defina as condições financeiras.</p>
+              <h4 className="dash-title-two mb-1">Locações</h4>
+              <p className="m0">A locação representa a relação operacional com imóvel, locatário, vigência e condições financeiras. O documento contratual é gerenciado separadamente.</p>
             </div>
             <button className="dash-btn-two tran3s" onClick={showForm ? resetForm : newLease}>
-              {showForm ? "Fechar formulário" : "+ Novo contrato"}
+              {showForm ? "Fechar formulário" : "+ Nova locação"}
             </button>
           </div>
 
@@ -230,7 +230,7 @@ export default function ContractsPage() {
           {showForm && (
             <form onSubmit={save}>
               <div className="bg-white card-box border-20 mb-40">
-                <h4 className="dash-title-three">{editingId ? "Editar contrato" : "Novo contrato"}</h4>
+                <h4 className="dash-title-three">{editingId ? "Editar locação" : "Nova locação"}</h4>
                 <div className="row">
                   <div className="col-md-6">
                     <div className="dash-input-wrapper mb-30">
@@ -315,7 +315,7 @@ export default function ContractsPage() {
 
                 {message && <p>{message}</p>}
                 <button type="submit" className="dash-btn-two tran3s me-3" disabled={saving}>
-                  {saving ? "Salvando..." : editingId ? "Salvar alterações" : "Criar contrato"}
+                  {saving ? "Salvando..." : editingId ? "Salvar alterações" : "Criar locação"}
                 </button>
                 <button type="button" className="dash-cancel-btn tran3s" onClick={resetForm}>Cancelar</button>
               </div>
@@ -327,8 +327,8 @@ export default function ContractsPage() {
               <table className="table property-list-table">
                 <thead><tr><th>Imóvel / Unidade</th><th>Locatário</th><th>Período</th><th>Aluguel</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody className="border-0">
-                  {loading ? <tr><td colSpan={6} className="text-center py-5">Carregando contratos...</td></tr> :
-                  leases.length === 0 ? <tr><td colSpan={6} className="text-center py-5">Nenhum contrato cadastrado.</td></tr> :
+                  {loading ? <tr><td colSpan={6} className="text-center py-5">Carregando locações...</td></tr> :
+                  leases.length === 0 ? <tr><td colSpan={6} className="text-center py-5">Nenhuma locação cadastrada.</td></tr> :
                   leases.map((l) => (
                     <tr key={l.id}>
                       <td><strong>{l.units?.properties?.name ?? "—"}</strong><br/><small>{l.units?.name ?? "—"}</small></td>
