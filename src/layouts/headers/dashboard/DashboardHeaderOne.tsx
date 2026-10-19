@@ -78,6 +78,7 @@ const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
                   {item("/dashboard/invoices","Cobranças / Faturas",4)}
                   {item("/dashboard/rent","Recebimentos",4)}
                   {item("/dashboard/expenses","Despesas",4)}
+                  {item("/dashboard/reports","Relatórios",4)}
 
                   <li className="pt-20"><div className="nav-title">Operação</div></li>
                   {item("/dashboard/inspections","Vistorias",7)}
