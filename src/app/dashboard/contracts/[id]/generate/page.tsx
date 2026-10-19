@@ -370,10 +370,25 @@ export default function GenerateContractPage() {
       })
       .eq("id", lease.id);
 
+    const { error: contractLifecycleError } = await supabase
+      .from("rental_contracts")
+      .upsert({
+        user_id: user.id,
+        lease_id: lease.id,
+        template_id: templateId,
+        document_id: documentData.id,
+        phase: "signed",
+        version: 1,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "lease_id,version" });
+
     setGenerating(false);
 
-    if (leaseError) {
-      setMessage("PDF armazenado, mas houve erro ao vincular ao contrato: " + leaseError.message);
+    if (leaseError || contractLifecycleError) {
+      setMessage(
+        "PDF armazenado, mas houve erro ao atualizar o ciclo contratual: " +
+        (leaseError?.message ?? contractLifecycleError?.message ?? "")
+      );
       return;
     }
 
