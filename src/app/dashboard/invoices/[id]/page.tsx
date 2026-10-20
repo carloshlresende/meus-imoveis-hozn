@@ -56,6 +56,7 @@ export default function InvoiceDetailPage(){
   const [landlord,setLandlord]=useState<Landlord|null>(null);
   const [loading,setLoading]=useState(true);
   const [generating,setGenerating]=useState(false);
+  const [sendingWhatsapp,setSendingWhatsapp]=useState(false);
   const [message,setMessage]=useState("");
 
   async function load(){
@@ -307,6 +308,58 @@ export default function InvoiceDetailPage(){
     window.open(data.signedUrl,"_blank","noopener,noreferrer");
   }
 
+  async function sendByWhatsApp(){
+    if(!invoice||!tenant?.phone){setMessage("Cadastre o telefone do inquilino antes de enviar pelo WhatsApp.");return;}
+    if(!invoice.invoice_document_id){setMessage("Gere e arquive o PDF da fatura antes de enviar pelo WhatsApp.");return;}
+    setSendingWhatsapp(true);setMessage("");
+    try{
+      const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error("Sessão expirada.");
+      const {data:account,error:accountError}=await supabase.from("whatsapp_accounts").select("id,invoice_template_name,invoice_template_language").eq("user_id",user.id).limit(1).maybeSingle();
+      if(accountError||!account)throw new Error("Conta WhatsApp não configurada.");
+
+      const phone=tenant.phone.replace(/\D/g,"");
+      const {data:conversation,error:convError}=await supabase.from("whatsapp_conversations").upsert({
+        user_id:user.id,whatsapp_account_id:account.id,tenant_id:invoice.tenant_id,contact_phone:phone,contact_name:tenant.name,status:"open",updated_at:new Date().toISOString()
+      },{onConflict:"whatsapp_account_id,contact_phone"}).select("id,last_inbound_at").single();
+      if(convError||!conversation)throw new Error("Não foi possível preparar a conversa no WhatsApp.");
+
+      const {data:doc,error:docError}=await supabase.from("documents").select("storage_path").eq("id",invoice.invoice_document_id).single();
+      if(docError||!doc?.storage_path)throw new Error("PDF arquivado não encontrado.");
+      const {data:signed,error:signedError}=await supabase.storage.from("private-documents").createSignedUrl(doc.storage_path,600);
+      if(signedError||!signed?.signedUrl)throw new Error("Não foi possível preparar o PDF para envio.");
+
+      const inWindow=conversation.last_inbound_at&&Date.now()-new Date(conversation.last_inbound_at).getTime()<=24*60*60*1000;
+      const filename=`fatura-${reference.replace("/","-")}.pdf`;
+      let body:any;
+
+      if(inWindow){
+        body={conversation_id:conversation.id,kind:"document",link:signed.signedUrl,filename,caption:`Fatura de locação ${reference} - vencimento ${brDate(invoice.due_date)}`,invoice_id:invoice.id};
+      }else{
+        if(!account.invoice_template_name)throw new Error("A janela de 24h está fechada e nenhum template de fatura foi configurado. Vá em WhatsApp e selecione um template aprovado.");
+        body={
+          conversation_id:conversation.id,
+          kind:"template",
+          template_name:account.invoice_template_name,
+          template_language:account.invoice_template_language||"pt_BR",
+          preview_text:`Fatura ${reference}`,
+          invoice_id:invoice.id,
+          components:[{type:"header",parameters:[{type:"document",document:{link:signed.signedUrl,filename}}]}]
+        };
+      }
+
+      const {data,error}=await supabase.functions.invoke("whatsapp-send-message",{body});
+      if(error||data?.error)throw new Error(data?.error||error?.message||"Falha ao enviar pelo WhatsApp.");
+
+      await supabase.from("invoices").update({whatsapp_status:"sent",whatsapp_sent_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",invoice.id);
+      setMessage(inWindow?"Fatura enviada pelo WhatsApp.":"Template de fatura enviado pelo WhatsApp com o PDF anexado.");
+      await load();
+    }catch(err){
+      setMessage(err instanceof Error?err.message:"Erro ao enviar pelo WhatsApp.");
+    }finally{
+      setSendingWhatsapp(false);
+    }
+  }
+
   if(loading)return <Wrapper><div className="dashboard-body"><DashboardHeaderTwo title="Visualizar fatura"/><div className="bg-white card-box border-20">Carregando...</div></div></Wrapper>;
 
   return <Wrapper><div className="dashboard-body"><div className="position-relative">
@@ -381,6 +434,7 @@ export default function InvoiceDetailPage(){
         {generating?"Gerando...":invoice?.payment_mode==="manual_pix"?"Gerar fatura PDF":"Gerar fatura + boleto PDF"}
       </button>
       {invoice?.invoice_document_id&&<button className="btn btn-outline-dark" onClick={openArchived}>Abrir PDF arquivado</button>}
+      {invoice?.invoice_document_id&&<button className="btn btn-success" onClick={sendByWhatsApp} disabled={sendingWhatsapp}>{sendingWhatsapp?"Enviando...":"Enviar pelo WhatsApp"}</button>}
     </div>
 
     {message&&<div className="alert alert-light border mt-25">{message}</div>}
