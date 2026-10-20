@@ -84,7 +84,7 @@ const DashboardHeaderOne = ({ isActive, setIsActive }: any) => {
                   {item("/dashboard/inspections","Vistorias",7)}
 
                   <li className="pt-20"><div className="nav-title">Comunicação</div></li>
-                  {item("/dashboard/message","Mensagens",2)}
+                  {item("/dashboard/message","WhatsApp",2)}
 
                   <li className="bottom-line pt-30 lg-pt-20 mb-30 lg-mb-20"></li>
                   <li><div className="nav-title">Minha conta</div></li>
