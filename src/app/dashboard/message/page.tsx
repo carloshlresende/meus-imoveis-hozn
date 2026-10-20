@@ -5,7 +5,7 @@ import Wrapper from "@/layouts/Wrapper";
 import DashboardHeaderTwo from "@/layouts/headers/dashboard/DashboardHeaderTwo";
 import { createClient } from "@/lib/supabase/client";
 
-type Account={id:string;display_phone_number:string|null;verified_name:string|null};
+type Account={id:string;display_phone_number:string|null;verified_name:string|null;invoice_template_name:string|null;invoice_template_language:string|null};
 type Tenant={id:string;name:string;phone:string|null};
 type Conversation={
  id:string;tenant_id:string|null;contact_phone:string;contact_name:string|null;last_message_at:string|null;
@@ -30,6 +30,7 @@ export default function WhatsAppPage(){
  const [newTenantId,setNewTenantId]=useState("");
  const [draft,setDraft]=useState("");
  const [templateId,setTemplateId]=useState("");
+ const [invoiceTemplateId,setInvoiceTemplateId]=useState("");
  const [loading,setLoading]=useState(true);
  const [sending,setSending]=useState(false);
  const [message,setMessage]=useState("");
@@ -40,13 +41,18 @@ export default function WhatsAppPage(){
  async function loadBase(){
   setLoading(true);
   const [a,t,c,tp]=await Promise.all([
-   supabase.from("whatsapp_accounts").select("id,display_phone_number,verified_name").limit(1).maybeSingle(),
+   supabase.from("whatsapp_accounts").select("id,display_phone_number,verified_name,invoice_template_name,invoice_template_language").limit(1).maybeSingle(),
    supabase.from("tenants").select("id,name,phone").order("name"),
    supabase.from("whatsapp_conversations").select("id,tenant_id,contact_phone,contact_name,last_message_at,last_inbound_at,last_outbound_at,unread_count,status,tenants(name,phone)").eq("status","open").order("last_message_at",{ascending:false,nullsFirst:false}),
    supabase.from("whatsapp_templates").select("id,name,language,category,status,body_preview").order("name")
   ]);
   if(a.error||t.error||c.error||tp.error)setMessage(a.error?.message||t.error?.message||c.error?.message||tp.error?.message||"Erro ao carregar WhatsApp.");
-  setAccount(a.data as Account|null);setTenants((t.data??[]) as Tenant[]);setConversations((c.data as unknown as Conversation[])??[]);setTemplates((tp.data??[]) as Template[]);
+  const accountData=a.data as Account|null;
+  setAccount(accountData);setTenants((t.data??[]) as Tenant[]);setConversations((c.data as unknown as Conversation[])??[]);setTemplates((tp.data??[]) as Template[]);
+  if(accountData?.invoice_template_name){
+    const match=(tp.data??[]).find((x:any)=>x.name===accountData.invoice_template_name&&x.language===(accountData.invoice_template_language||"pt_BR"));
+    if(match)setInvoiceTemplateId(match.id);
+  }
   if(!selectedId&&(c.data?.length??0)>0)setSelectedId((c.data as any[])[0].id);
   setLoading(false);
  }
@@ -102,6 +108,18 @@ export default function WhatsAppPage(){
   await loadMessages(selected.id);await loadBase();
  }
 
+ async function saveInvoiceTemplate(){
+  if(!account)return;
+  const tp=templates.find(t=>t.id===invoiceTemplateId);
+  const {error}=await supabase.from("whatsapp_accounts").update({
+    invoice_template_name:tp?.name||null,
+    invoice_template_language:tp?.language||"pt_BR",
+    updated_at:new Date().toISOString()
+  }).eq("id",account.id);
+  if(error)setMessage("Erro ao salvar template de fatura: "+error.message);
+  else {setMessage(tp?"Template de fatura mensal salvo.":"Template de fatura removido.");await loadBase();}
+ }
+
  async function syncTemplates(){
   setMessage("Sincronizando templates...");
   const {data,error}=await supabase.functions.invoke("whatsapp-sync-templates",{body:{}});
@@ -130,10 +148,10 @@ export default function WhatsAppPage(){
   {message&&<div className="alert alert-light border">{message}</div>}
 
   <div className="bg-white card-box border-20 mb-25">
-   <div className="d-flex flex-wrap align-items-end gap-2">
-    <div style={{minWidth:300,flex:1}}><label className="d-block mb-1">Abrir conversa com inquilino</label><select className="form-select" value={newTenantId} onChange={e=>setNewTenantId(e.target.value)}><option value="">Selecione</option>{tenants.map(t=><option key={t.id} value={t.id} disabled={!t.phone}>{t.name}{t.phone?` · ${t.phone}`:" · sem telefone"}</option>)}</select></div>
-    <button className="btn btn-dark" disabled={!account||!newTenantId} onClick={startConversation}>Abrir conversa</button>
-    <button className="btn btn-outline-dark" disabled={!account} onClick={syncTemplates}>Sincronizar templates</button>
+   <div className="row g-3 align-items-end">
+    <div className="col-lg-6"><label className="d-block mb-1">Abrir conversa com inquilino</label><div className="d-flex gap-2"><select className="form-select" value={newTenantId} onChange={e=>setNewTenantId(e.target.value)}><option value="">Selecione</option>{tenants.map(t=><option key={t.id} value={t.id} disabled={!t.phone}>{t.name}{t.phone?` · ${t.phone}`:" · sem telefone"}</option>)}</select><button className="btn btn-dark" disabled={!account||!newTenantId} onClick={startConversation}>Abrir</button></div></div>
+    <div className="col-lg-6"><label className="d-block mb-1">Template aprovado para fatura mensal</label><div className="d-flex gap-2"><select className="form-select" value={invoiceTemplateId} onChange={e=>setInvoiceTemplateId(e.target.value)}><option value="">Não configurado</option>{templates.filter(t=>!t.status||t.status==="APPROVED").map(t=><option key={t.id} value={t.id}>{t.name} · {t.language}</option>)}</select><button className="btn btn-outline-dark" disabled={!account} onClick={saveInvoiceTemplate}>Salvar</button></div></div>
+    <div className="col-12"><button className="btn btn-sm btn-link p-0 text-decoration-none" disabled={!account} onClick={syncTemplates}>Sincronizar templates com a Meta</button></div>
    </div>
   </div>
 
